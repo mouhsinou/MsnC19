@@ -1,7 +1,5 @@
 import streamlit as st
-import requests
 import pandas as pd
-import os
 import io
 import plotly.express as px
 
@@ -36,10 +34,10 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Fonctions utilitaires
-def load_patient_data(file_path):
-    with open(file_path, 'r') as f:
-        lines = f.readlines()
-    
+def load_patient_data(file):
+    content = file.read().decode("utf-8")
+    lines = content.splitlines()
+
     patient_id = lines[0].split(":")[1].strip()
     
     data_lines = lines[3:]
@@ -60,13 +58,11 @@ def load_patient_data(file_path):
     
     return df
 
-def combine_all_patients(directory):
+def combine_all_patients(uploaded_files):
     all_data = []
-    for filename in os.listdir(directory):
-        if filename.endswith('.txt'):
-            file_path = os.path.join(directory, filename)
-            df = load_patient_data(file_path)
-            all_data.append(df)
+    for file in uploaded_files:
+        df = load_patient_data(file)
+        all_data.append(df)
     
     combined_df = pd.concat(all_data, ignore_index=True)
     return combined_df
@@ -155,27 +151,25 @@ def main_page():
 def prepare_data_page():
     st.title('🔬 Data Preparation')
 
-    directory = st.text_input('📁 Enter the directory path containing the text files:')
+    uploaded_files = st.file_uploader("Upload multiple text files", type="txt", accept_multiple_files=True)
 
-    if st.button('🔄 Combine and Prepare Data'):
-        if directory and os.path.isdir(directory):
-            with st.spinner('Combining and preparing data...'):
-                combined_df = combine_all_patients(directory)
-                
-                combined_df['Min_Sec'] = combined_df['Min_Sec'].apply(convert_to_seconds)
-                
-                d_columns = [f'D{i}' for i in range(1, 65)]
-                
-                df_grouped = combined_df.groupby('Patient_ID')[d_columns].mean()
-                df_grouped1 = combined_df.groupby('Patient_ID')['Min_Sec'].mean().reset_index()
-                
-                df_final = df_grouped1.set_index('Patient_ID').join(df_grouped)
-                
-                columns_order = ['Min_Sec'] + [col for col in df_final.columns if col != 'Min_Sec']
-                df_final = df_final[columns_order]
-                
-                st.success('Data combined and prepared successfully!')
+    if uploaded_files:
+        with st.spinner('Combining and preparing data...'):
+            combined_df = combine_all_patients(uploaded_files)
             
+            combined_df['Min_Sec'] = combined_df['Min_Sec'].apply(convert_to_seconds)
+            
+            d_columns = [f'D{i}' for i in range(1, 65)]
+            
+            df_grouped = combined_df.groupby('Patient_ID')[d_columns].mean()
+            df_grouped1 = combined_df.groupby('Patient_ID')['Min_Sec'].mean().reset_index()
+            
+            df_final = df_grouped1.set_index('Patient_ID').join(df_grouped)
+            
+            columns_order = ['Min_Sec'] + [col for col in df_final.columns if col != 'Min_Sec']
+            df_final = df_final[columns_order]
+            
+            st.success('Data combined and prepared successfully!')
             st.subheader('Preview of Final Data:')
             st.dataframe(df_final.head())
             
@@ -186,8 +180,6 @@ def prepare_data_page():
                 file_name="prepared_patient_data.csv",
                 mime="text/csv",
             )
-        else:
-            st.error('Please enter a valid directory path.')
 
 # Navigation principale
 def main():
