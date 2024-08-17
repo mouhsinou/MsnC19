@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import io
 import plotly.express as px
+import requests
 
 # Configuration de la page
 st.set_page_config(page_title="COVID-19 Breath Analysis", page_icon="🫁", layout="wide")
