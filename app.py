@@ -79,83 +79,88 @@ def convert_to_seconds(time_str):
 def main_page():
     st.title('🫁 COVID-19 Diagnosis from Breath Analysis')
 
-    st.header('📊 Individual Patient Analysis')
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        min_sec = st.number_input('Min_Sec', min_value=0.0, step=0.1)
-    
-    input_data = {'Min_Sec': min_sec}
-    
-    for i in range(1, 65):
-        if i <= 32:
-            with col1:
-                input_data[f'D{i}'] = st.number_input(f'D{i}', key=f'D{i}')
-        else:
-            with col2:
-                input_data[f'D{i}'] = st.number_input(f'D{i}', key=f'D{i}')
+    # Choix du type de diagnostic
+    diagnosis_type = st.selectbox("Choisissez le type de diagnostic", ["Diagnostic pour un seul patient", "Diagnostic pour plusieurs patients"])
 
-    if st.button('🔬 Predict'):
-        with st.spinner('Analyzing...'):
-            response = requests.post('https://msnoc19.onrender.com/predict/', json=input_data)
-            if response.status_code == 200:
-                result = response.json()["prediction"]
-                if result == "POSITIVE":
-                    st.error(f'Test Result: {result}')
-                else:
-                    st.success(f'Test Result: {result}')
-                st.balloons()
+    if diagnosis_type == "Diagnostic pour un seul patient":
+        st.header('📊 Diagnostic pour un seul patient')
+
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            min_sec = st.number_input('Min_Sec', min_value=0.0, step=0.1)
+        
+        input_data = {'Min_Sec': min_sec}
+        
+        for i in range(1, 65):
+            if i <= 32:
+                with col1:
+                    input_data[f'D{i}'] = st.number_input(f'D{i}', key=f'D{i}')
             else:
-                st.warning('Error in prediction. Please check the input values.')
+                with col2:
+                    input_data[f'D{i}'] = st.number_input(f'D{i}', key=f'D{i}')
 
-    st.header('📁 Batch Prediction')
-
-    uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
-
-    if uploaded_file is not None:
-        data = pd.read_csv(uploaded_file)
-        original_data = data.copy()
-        
-        if 'Patient_ID' in data.columns:
-            data = data.drop(columns=['Patient_ID'])
-        
-        if st.button('🔬 Predict Batch'):
-            with st.spinner('Processing batch prediction...'):
-                response = requests.post('https://msnoc19.onrender.com/predict_batch/', json=data.to_dict(orient='records'))
+        if st.button('🔬 Prédire'):
+            with st.spinner('Analyse en cours...'):
+                response = requests.post('https://msnoc19.onrender.com/predict/', json=input_data)
                 if response.status_code == 200:
-                    predictions = response.json()['predictions']
-                    st.success('Predictions completed!')
-                    
-                    original_data['Prediction'] = predictions
-                    
-                    st.subheader('Prediction Results')
-                    st.dataframe(original_data)
-                    
-                    # Visualisation
-                    fig = px.pie(original_data, names='Prediction', title='Distribution of Predictions')
-                    st.plotly_chart(fig)
-                    
-                    csv_buffer = io.StringIO()
-                    original_data.to_csv(csv_buffer, index=False)
-                    csv_str = csv_buffer.getvalue()
-                    
-                    st.download_button(
-                        label="📥 Download Results CSV",
-                        data=csv_str,
-                        file_name="prediction_results.csv",
-                        mime="text/csv",
-                    )
+                    result = response.json()["prediction"]
+                    if result == "POSITIVE":
+                        st.error(f'Résultat du test : {result}')
+                    else:
+                        st.success(f'Résultat du test : {result}')
+                    st.balloons()
                 else:
-                    st.error('Error in prediction. Please check the input file.')
+                    st.warning('Erreur dans la prédiction. Veuillez vérifier les valeurs saisies.')
+
+    elif diagnosis_type == "Diagnostic pour plusieurs patients":
+        st.header('📁 Prédiction en lot')
+
+        uploaded_file = st.file_uploader("Choisissez un fichier CSV", type="csv")
+
+        if uploaded_file is not None:
+            data = pd.read_csv(uploaded_file)
+            original_data = data.copy()
+            
+            if 'Patient_ID' in data.columns:
+                data = data.drop(columns=['Patient_ID'])
+            
+            if st.button('🔬 Prédire en lot'):
+                with st.spinner('Traitement des prédictions en lot...'):
+                    response = requests.post('https://msnoc19.onrender.com/predict_batch/', json=data.to_dict(orient='records'))
+                    if response.status_code == 200:
+                        predictions = response.json()['predictions']
+                        st.success('Prédictions terminées!')
+                        
+                        original_data['Prédiction'] = predictions
+                        
+                        st.subheader('Résultats des Prédictions')
+                        st.dataframe(original_data)
+                        
+                        # Visualisation
+                        fig = px.pie(original_data, names='Prédiction', title='Distribution des Prédictions')
+                        st.plotly_chart(fig)
+                        
+                        csv_buffer = io.StringIO()
+                        original_data.to_csv(csv_buffer, index=False)
+                        csv_str = csv_buffer.getvalue()
+                        
+                        st.download_button(
+                            label="📥 Télécharger les résultats au format CSV",
+                            data=csv_str,
+                            file_name="resultats_predictions.csv",
+                            mime="text/csv",
+                        )
+                    else:
+                        st.error('Erreur dans la prédiction. Veuillez vérifier le fichier d’entrée.')
 
 def prepare_data_page():
-    st.title('🔬 Data Preparation')
+    st.title('🔬 Préparation des données')
 
-    uploaded_files = st.file_uploader("Upload multiple text files", type="txt", accept_multiple_files=True)
+    uploaded_files = st.file_uploader("Téléchargez plusieurs fichiers texte", type="txt", accept_multiple_files=True)
 
     if uploaded_files:
-        with st.spinner('Combining and preparing data...'):
+        with st.spinner('Combinaison et préparation des données...'):
             combined_df = combine_all_patients(uploaded_files)
             
             combined_df['Min_Sec'] = combined_df['Min_Sec'].apply(convert_to_seconds)
@@ -170,26 +175,26 @@ def prepare_data_page():
             columns_order = ['Min_Sec'] + [col for col in df_final.columns if col != 'Min_Sec']
             df_final = df_final[columns_order]
             
-            st.success('Data combined and prepared successfully!')
-            st.subheader('Preview of Final Data:')
+            st.success('Données combinées et préparées avec succès!')
+            st.subheader('Aperçu des données finales:')
             st.dataframe(df_final.head())
             
             csv = df_final.to_csv(index=True)
             st.download_button(
-                label="📥 Download Prepared Data CSV",
+                label="📥 Télécharger les données préparées au format CSV",
                 data=csv,
-                file_name="prepared_patient_data.csv",
+                file_name="donnees_patients_preparees.csv",
                 mime="text/csv",
             )
 
 # Navigation principale
 def main():
     st.sidebar.title('Navigation')
-    page = st.sidebar.radio('Go to', ['🏠 Main Page', '🔬 Prepare Data'])
+    page = st.sidebar.radio('Aller à', ['🏠 Page principale', '🔬 Préparer les données'])
 
-    if page == '🏠 Main Page':
+    if page == '🏠 Page principale':
         main_page()
-    elif page == '🔬 Prepare Data':
+    elif page == '🔬 Préparer les données':
         prepare_data_page()
     
     st.sidebar.write("**Mes Coordonnées :**")
