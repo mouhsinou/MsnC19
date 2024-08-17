@@ -101,7 +101,7 @@ def main_page():
 
     if st.button('🔬 Predict'):
         with st.spinner('Analyzing...'):
-            response = requests.post('http://localhost:8000/predict/', json=input_data)
+            response = requests.post('https://msnoc19.onrender.com/predict/', json=input_data)
             if response.status_code == 200:
                 result = response.json()["prediction"]
                 if result == "POSITIVE":
@@ -125,7 +125,7 @@ def main_page():
         
         if st.button('🔬 Predict Batch'):
             with st.spinner('Processing batch prediction...'):
-                response = requests.post('http://localhost:8000/predict_batch/', json=data.to_dict(orient='records'))
+                response = requests.post('https://msnoc19.onrender.com/predict_batch/', json=data.to_dict(orient='records'))
                 if response.status_code == 200:
                     predictions = response.json()['predictions']
                     st.success('Predictions completed!')
@@ -198,6 +198,12 @@ def main():
         main_page()
     elif page == '🔬 Prepare Data':
         prepare_data_page()
+    
+    st.sidebar.write("**Mes Coordonnées :**")
+    st.sidebar.write("**Nom:** MAMA Moussinou")
+    st.sidebar.write("**Email:** mamamouhsinou@gmail.com")
+    st.sidebar.write("**Téléphone:** +229 95231680")
+    st.sidebar.write("**LinkedIn:** moussinou-mama-8b6270284")
 
 if __name__ == "__main__":
     main()
